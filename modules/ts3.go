@@ -74,7 +74,7 @@ func loop() {
 	}
 }
 func ts3HandleMessage(payload *WebhookPayload) {
-	if payload.TriggerWord == "/ts" || payload.TriggerWord == "!ts" {
+	if payload.Command == "/ts" || payload.TriggerWord == "!ts" {
 		log.Println("TS3 users requested by " + payload.UserName)
 		users, _ := getUsers()
 		var s string
