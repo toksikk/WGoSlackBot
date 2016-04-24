@@ -129,8 +129,13 @@ var (
 
 func init() {
 	MsgHandlers["twitch"] = twitchHandleMessage
-	announceChannel = ModParams["twitchchannel"]
 	log.Println("Initializing twitch module")
+	go configAndPoll()
+}
+
+func configAndPoll() {
+	time.Sleep(5 * time.Second)
+	announceChannel = ModParams["twitchchan"]
 	go pollStreamData()
 }
 
@@ -140,38 +145,43 @@ func twitchHandleMessage(payload *WebhookPayload) {
 		return
 	}
 	switch tok[0] {
-	case "!twitch" || "/twitch":
-		switch len(tok) {
-		case 1:
-			onlinestreams := 0
-			for streamname, _ := range twitch {
-				var so TwitchStreamObject
-				var co TwitchChannelObject
-				so = getTwitchStreamObject(streamname)
-				if so.Stream.Game != "" {
-					onlinestreams++
-					co = getTwitchChannelObject(streamname)
-					twitchSendMsg(co, so)
-					twitch[streamname] = true
-				} else {
-					twitch[streamname] = false
-				}
-			}
-			if onlinestreams == 0 {
-				SayCh <- GeneratePayload(payload.ChannelName, "", "All streams offline", "Twitch_Bot")
-			}
-		case 2:
-			streamname := tok[1]
+	case "!twitch":
+		handleCommand(tok, "#"+payload.ChannelName)
+	case "/twitch":
+		handleCommand(tok, "@"+payload.UserName)
+	default:
+	}
+}
+func handleCommand(tok []string, target string) {
+	switch len(tok) {
+	case 1:
+		onlinestreams := 0
+		for streamname, _ := range twitch {
 			var so TwitchStreamObject
 			var co TwitchChannelObject
 			so = getTwitchStreamObject(streamname)
 			if so.Stream.Game != "" {
+				onlinestreams++
 				co = getTwitchChannelObject(streamname)
-				twitchSendMsg(co, so)
+				twitchSendMsg(co, so, target)
+				twitch[streamname] = true
 			} else {
-				SayCh <- GeneratePayload("@"+payload.UserName, "", streamname+" not found or offline", "Twitch_Bot")
+				twitch[streamname] = false
 			}
-		default:
+		}
+		if onlinestreams == 0 {
+			SayCh <- GeneratePayload(target, "", "All streams offline", "Twitch_Bot")
+		}
+	case 2:
+		streamname := tok[1]
+		var so TwitchStreamObject
+		var co TwitchChannelObject
+		so = getTwitchStreamObject(streamname)
+		if so.Stream.Game != "" {
+			co = getTwitchChannelObject(streamname)
+			twitchSendMsg(co, so, target)
+		} else {
+			SayCh <- GeneratePayload(target, "", streamname+" not found or offline", "Twitch_Bot")
 		}
 	default:
 	}
@@ -187,7 +197,7 @@ func pollStreamData() {
 				so = getTwitchStreamObject(streamname)
 				if so.Stream.Game != "" && !twitch[streamname] {
 					co = getTwitchChannelObject(streamname)
-					twitchSendMsg(co, so)
+					twitchSendMsg(co, so, "")
 					twitch[streamname] = true
 				} else if so.Stream.Game == "" && twitch[streamname] {
 					twitch[streamname] = false
@@ -236,8 +246,11 @@ func getTwitchChannelObject(streamname string) TwitchChannelObject {
 	return tcobj
 }
 
-func twitchSendMsg(tcobj TwitchChannelObject, tso TwitchStreamObject) {
-	SayCh <- GeneratePayload(announceChannel,
+func twitchSendMsg(tcobj TwitchChannelObject, tso TwitchStreamObject, target string) {
+	if target == "" {
+		target = announceChannel
+	}
+	SayCh <- GeneratePayload(target,
 		"",
 		"*"+tso.Stream.Channel.DisplayName+
 			"*\n*Title:* "+tcobj.Status+
