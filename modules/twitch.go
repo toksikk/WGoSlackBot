@@ -113,13 +113,15 @@ type TwitchStreamObject struct {
 }
 
 var (
-	twitch = map[string]bool{
+	announceChannel string
+	twitch          = map[string]bool{
 		"rocketbeanstv": false,
 		"blizzard":      false,
 		"ea":            false,
 		"warcraft":      false,
 		"starcraft":     false,
 		"bobross":       false,
+		"pixelj0ckey":   false,
 	}
 	twitchapiurlstreams  = "https://api.twitch.tv/kraken/streams/"
 	twitchapiurlchannels = "https://api.twitch.tv/kraken/channels/"
@@ -127,6 +129,7 @@ var (
 
 func init() {
 	MsgHandlers["twitch"] = twitchHandleMessage
+	announceChannel = ModParams["twitchchannel"]
 	log.Println("Initializing twitch module")
 	go pollStreamData()
 }
@@ -137,7 +140,7 @@ func twitchHandleMessage(payload *WebhookPayload) {
 		return
 	}
 	switch tok[0] {
-	case "!twitch":
+	case "!twitch" || "/twitch":
 		switch len(tok) {
 		case 1:
 			onlinestreams := 0
@@ -155,7 +158,7 @@ func twitchHandleMessage(payload *WebhookPayload) {
 				}
 			}
 			if onlinestreams == 0 {
-				SayCh <- GeneratePayload("@"+payload.UserName, "", "All streams offline", "Twitch_Bot")
+				SayCh <- GeneratePayload(payload.ChannelName, "", "All streams offline", "Twitch_Bot")
 			}
 		case 2:
 			streamname := tok[1]
@@ -175,21 +178,23 @@ func twitchHandleMessage(payload *WebhookPayload) {
 }
 
 func pollStreamData() {
-	time.Sleep(10 * time.Second)
-	for {
-		for streamname, _ := range twitch {
-			var so TwitchStreamObject
-			var co TwitchChannelObject
-			so = getTwitchStreamObject(streamname)
-			if so.Stream.Game != "" && !twitch[streamname] {
-				co = getTwitchChannelObject(streamname)
-				twitchSendMsg(co, so)
-				twitch[streamname] = true
-			} else if so.Stream.Game == "" && twitch[streamname] {
-				twitch[streamname] = false
+	if announceChannel != "" {
+		time.Sleep(10 * time.Second)
+		for {
+			for streamname, _ := range twitch {
+				var so TwitchStreamObject
+				var co TwitchChannelObject
+				so = getTwitchStreamObject(streamname)
+				if so.Stream.Game != "" && !twitch[streamname] {
+					co = getTwitchChannelObject(streamname)
+					twitchSendMsg(co, so)
+					twitch[streamname] = true
+				} else if so.Stream.Game == "" && twitch[streamname] {
+					twitch[streamname] = false
+				}
 			}
+			time.Sleep(180 * time.Second)
 		}
-		time.Sleep(180 * time.Second)
 	}
 }
 
@@ -232,7 +237,7 @@ func getTwitchChannelObject(streamname string) TwitchChannelObject {
 }
 
 func twitchSendMsg(tcobj TwitchChannelObject, tso TwitchStreamObject) {
-	SayCh <- GeneratePayload("#wgs-service",
+	SayCh <- GeneratePayload(announceChannel,
 		"",
 		"*"+tso.Stream.Channel.DisplayName+
 			"*\n*Title:* "+tcobj.Status+

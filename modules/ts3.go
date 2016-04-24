@@ -74,19 +74,21 @@ func loop() {
 	}
 }
 func ts3HandleMessage(payload *WebhookPayload) {
-	log.Println("TS3 users requested by " + payload.UserName)
-	users, _ := getUsers()
-	var s string
-	i := 0
-	s += "Current users on TS3 Server:\n"
-	for u, _ := range users {
-		i++
-		s += "- " + u
-		if i != len(users) {
-			s += "\n"
+	if payload.TriggerWord == "/ts" || payload.TriggerWord == "!ts" {
+		log.Println("TS3 users requested by " + payload.UserName)
+		users, _ := getUsers()
+		var s string
+		i := 0
+		s += "Current users on TS3 Server:\n"
+		for u, _ := range users {
+			i++
+			s += "- " + u
+			if i != len(users) {
+				s += "\n"
+			}
 		}
+		SayCh <- GeneratePayload("@"+payload.UserName, ":poop:", s, botname)
 	}
-	SayCh <- GeneratePayload("@"+payload.UserName, ":poop:", s, botname)
 }
 
 func getUsers() (u map[string]bool, e error) {
