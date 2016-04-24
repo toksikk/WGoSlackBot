@@ -232,7 +232,7 @@ func getTwitchChannelObject(streamname string) TwitchChannelObject {
 }
 
 func twitchSendMsg(tcobj TwitchChannelObject, tso TwitchStreamObject) {
-	SayCh <- GeneratePayload("#wgs-spam",
+	SayCh <- GeneratePayload("#wgs-service",
 		"",
 		"*"+tso.Stream.Channel.DisplayName+
 			"*\n*Title:* "+tcobj.Status+
