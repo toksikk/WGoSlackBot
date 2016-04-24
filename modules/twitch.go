@@ -144,17 +144,29 @@ func twitchHandleMessage(payload *WebhookPayload) {
 	if len(tok) < 1 {
 		return
 	}
+	if payload.Command == "/twitch" {
+		log.Print("tok: ")
+		log.Println(tok)
+		handleCommand(tok, "@"+payload.UserName, true)
+	}
 	switch tok[0] {
 	case "!twitch":
-		handleCommand(tok, "#"+payload.ChannelName)
-	case "/twitch":
-		handleCommand(tok, "@"+payload.UserName)
+		handleCommand(tok, "#"+payload.ChannelName, false)
 	default:
 	}
 }
-func handleCommand(tok []string, target string) {
+func handleCommand(tok []string, target string, isSlashCommand bool) {
+	var tokMod int
+	if isSlashCommand {
+		tokMod = 1
+		if tok[1-tokMod] == "" {
+			tok = make([]string, 0, 0)
+		}
+	} else {
+		tokMod = 0
+	}
 	switch len(tok) {
-	case 1:
+	case 1 - tokMod:
 		onlinestreams := 0
 		for streamname, _ := range twitch {
 			var so TwitchStreamObject
@@ -172,8 +184,8 @@ func handleCommand(tok []string, target string) {
 		if onlinestreams == 0 {
 			SayCh <- GeneratePayload(target, "", "All streams offline", "Twitch_Bot")
 		}
-	case 2:
-		streamname := tok[1]
+	case 2 - tokMod:
+		streamname := tok[1-tokMod]
 		var so TwitchStreamObject
 		var co TwitchChannelObject
 		so = getTwitchStreamObject(streamname)

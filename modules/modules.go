@@ -24,6 +24,8 @@ type WebhookPayload struct {
 	TriggerWord string `json:"trigger_word"`
 	UserID      string `json:"user_id"`
 	UserName    string `json:"user_name"`
+	Command     string `json:"command"`
+	ResponseURL string `json:"response_url"`
 }
 
 var (

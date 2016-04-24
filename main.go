@@ -54,6 +54,8 @@ func webhookHandler(w http.ResponseWriter, req *http.Request) {
 		UserName:    req.Form.Get("user_name"),
 		Text:        req.Form.Get("text"),
 		TriggerWord: req.Form.Get("trigger_word"),
+		Command:     req.Form.Get("command"),
+		ResponseURL: req.Form.Get("response_url"),
 	}
 	modules.HandleMessage(&whp)
 }
