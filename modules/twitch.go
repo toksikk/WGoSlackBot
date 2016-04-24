@@ -114,6 +114,8 @@ type TwitchStreamObject struct {
 
 var (
 	announceChannel string
+	twitchBotIcon   string
+	twitchBotName   string
 	twitch          = map[string]bool{
 		"rocketbeanstv": false,
 		"blizzard":      false,
@@ -136,6 +138,8 @@ func init() {
 func configAndPoll() {
 	time.Sleep(5 * time.Second)
 	announceChannel = ModParams["twitchchan"]
+	twitchBotIcon = ModParams["twitchicon"]
+	twitchBotName = ModParams["twitchbotname"]
 	go pollStreamData()
 }
 
@@ -182,7 +186,7 @@ func handleCommand(tok []string, target string, isSlashCommand bool) {
 			}
 		}
 		if onlinestreams == 0 {
-			SayCh <- GeneratePayload(target, "", "All streams offline", "Twitch_Bot")
+			SayCh <- GeneratePayload(target, twitchBotIcon, "All streams offline", twitchBotName)
 		}
 	case 2 - tokMod:
 		streamname := tok[1-tokMod]
@@ -193,7 +197,7 @@ func handleCommand(tok []string, target string, isSlashCommand bool) {
 			co = getTwitchChannelObject(streamname)
 			twitchSendMsg(co, so, target)
 		} else {
-			SayCh <- GeneratePayload(target, "", streamname+" not found or offline", "Twitch_Bot")
+			SayCh <- GeneratePayload(target, twitchBotIcon, streamname+" not found or offline", twitchBotName)
 		}
 	default:
 	}
@@ -263,11 +267,11 @@ func twitchSendMsg(tcobj TwitchChannelObject, tso TwitchStreamObject, target str
 		target = announceChannel
 	}
 	SayCh <- GeneratePayload(target,
-		"",
+		twitchBotIcon,
 		"*"+tso.Stream.Channel.DisplayName+
 			"*\n*Title:* "+tcobj.Status+
 			"\n*Viewers:* "+util.NumberToString(tso.Stream.Viewers, '.')+
 			"\n*Playing:* "+tso.Stream.Game+
 			"\n"+tcobj.URL+"\n",
-		"Twitch_Bot")
+		twitchBotName)
 }

@@ -37,7 +37,7 @@ var (
 func Init(ch chan Payload, params string) {
 	SayCh = ch
 	for _, param := range strings.Split(params, "!") {
-		kv := strings.Split(param, ":")
+		kv := strings.Split(param, ";")
 		ModParams[kv[0]] = kv[1]
 		log.Println(kv[0], kv[1])
 	}

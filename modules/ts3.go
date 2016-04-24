@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	users   = map[string]bool{}
-	host    string
-	port    string
-	user    string
-	pass    string
-	botname string
-	channel string
+	users     = map[string]bool{}
+	host      string
+	port      string
+	user      string
+	pass      string
+	botname   string
+	channel   string
+	tsboticon string
 )
 
 func init() {
@@ -33,6 +34,7 @@ func setConfig() {
 	pass = ModParams["tspass"]
 	botname = ModParams["tsbotname"]
 	channel = ModParams["tschan"]
+	tsboticon = ModParams["tsboticon"]
 	go loop()
 }
 func loop() {
@@ -59,12 +61,12 @@ func loop() {
 		} else {
 			for i, _ := range neu {
 				if users[i] != neu[i] {
-					SayCh <- GeneratePayload(channel, ":poop:", i+" joined TS3.", botname)
+					SayCh <- GeneratePayload(channel, tsboticon, i+" joined TS3.", botname)
 				}
 			}
 			for i, _ := range users {
 				if users[i] != neu[i] {
-					SayCh <- GeneratePayload(channel, ":poop:", i+" left TS3.", botname)
+					SayCh <- GeneratePayload(channel, tsboticon, i+" left TS3.", botname)
 				}
 			}
 			users = neu
@@ -87,7 +89,7 @@ func ts3HandleMessage(payload *WebhookPayload) {
 				s += "\n"
 			}
 		}
-		SayCh <- GeneratePayload("@"+payload.UserName, ":poop:", s, botname)
+		SayCh <- GeneratePayload("@"+payload.UserName, tsboticon, s, botname)
 	}
 }
 
