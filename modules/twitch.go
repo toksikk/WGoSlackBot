@@ -266,6 +266,7 @@ func twitchSendMsg(tcobj TwitchChannelObject, tso TwitchStreamObject, target str
 	if target == "" {
 		target = announceChannel
 	}
+	log.Println("TS3: announcing " + tso.Stream.Channel.DisplayName)
 	SayCh <- GeneratePayload(target,
 		twitchBotIcon,
 		"*"+tso.Stream.Channel.DisplayName+

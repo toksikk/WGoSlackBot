@@ -2,12 +2,14 @@
 package modules
 
 import (
-	"bufio"
+)
+import (
 	"log"
+	"time"
 	"net"
+	"bufio"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var (
@@ -24,9 +26,9 @@ var (
 func init() {
 	MsgHandlers["ts3"] = ts3HandleMessage
 	log.Println("Initializing ts3 module")
-	go setConfig()
+	go setTS3Config()
 }
-func setConfig() {
+func setTS3Config() {
 	time.Sleep(5 * time.Second)
 	host = ModParams["tshost"]
 	port = ModParams["tsport"]
@@ -35,12 +37,12 @@ func setConfig() {
 	botname = ModParams["tsbotname"]
 	channel = ModParams["tschan"]
 	tsboticon = ModParams["tsboticon"]
-	go loop()
+	go ts3loop()
 }
-func loop() {
+func ts3loop() {
 	for {
 		var err error
-		users, err = getUsers()
+		users, err = getTS3Users()
 		if err != nil {
 			log.Println(err)
 			log.Println("Trying again in 60 seconds.")
@@ -54,18 +56,20 @@ func loop() {
 		if channel == "" { // dont spam if no channel is set
 			break
 		}
-		neu, err := getUsers()
+		neu, err := getTS3Users()
 		if err != nil {
 			log.Println(err)
 			time.Sleep(50 * time.Second)
 		} else {
 			for i, _ := range neu {
 				if users[i] != neu[i] {
+					log.Println("TS3: " + i + " joined")
 					SayCh <- GeneratePayload(channel, tsboticon, i+" joined TS3.", botname)
 				}
 			}
 			for i, _ := range users {
 				if users[i] != neu[i] {
+					log.Println("TS3: " + i + " left")
 					SayCh <- GeneratePayload(channel, tsboticon, i+" left TS3.", botname)
 				}
 			}
@@ -77,8 +81,8 @@ func loop() {
 }
 func ts3HandleMessage(payload *WebhookPayload) {
 	if payload.Command == "/ts" || payload.TriggerWord == "!ts" {
-		log.Println("TS3 users requested by " + payload.UserName)
-		users, _ := getUsers()
+		log.Println("TS3: current users requested by " + payload.UserName)
+		users, _ := getTS3Users()
 		var s string
 		i := 0
 		s += "Current users on TS3 Server:\n"
@@ -93,7 +97,7 @@ func ts3HandleMessage(payload *WebhookPayload) {
 	}
 }
 
-func getUsers() (u map[string]bool, e error) {
+func getTS3Users() (u map[string]bool, e error) {
 	conn, err := net.Dial("tcp", host+":"+port)
 
 	if err != nil {
