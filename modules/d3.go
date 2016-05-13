@@ -80,7 +80,7 @@ func handleD3Request(payload *WebhookPayload, isCommand bool) string {
 				paragonSeasonHardcore := util.NumberToString(profile.ParagonLevelSeasonHardcore, '.')
 				var allHeroes string
 				for i, hero := range profile.Heroes {
-					allHeroes += classToIcon(hero.Class) + "" + heroTypeToIconString(hero.Seasonal, hero.Hardcore) + " " + hero.Name + " " + strconv.Itoa(hero.Level)
+					allHeroes += classToIcon(hero.Class, hero.Gender) + "" + heroTypeToIconString(hero.Seasonal, hero.Hardcore) + " " + hero.Name + " " + strconv.Itoa(hero.Level)
 					if i+1 != len(profile.Heroes) {
 						allHeroes += ", "
 					}
@@ -125,20 +125,27 @@ func handleD3Request(payload *WebhookPayload, isCommand bool) string {
 
 	return result
 }
-func classToIcon(class string) string {
+func classToIcon(class string, gender int) string {
+	genderstring := ""
+	if gender == 0 {
+		genderstring = "m"
+	}
+	if gender == 1 {
+		genderstring = "f"
+	}
 	switch class {
 	case "witch-doctor":
-		return ":d3witchdoctor:"
+		return ":d3witchdoctor" + genderstring + ":"
 	case "barbarian":
-		return ":d3barbarian:"
+		return ":d3barbarian" + genderstring + ":"
 	case "crusader":
-		return ":d3crusader:"
+		return ":d3crusader" + genderstring + ":"
 	case "demon-hunter":
-		return ":d3demonhunter:"
+		return ":d3demonhunter" + genderstring + ":"
 	case "wizard":
-		return ":d3wizard:"
+		return ":d3wizard" + genderstring + ":"
 	case "monk":
-		return ":d3monk:"
+		return ":d3monk" + genderstring + ":"
 	default:
 		return ""
 	}
