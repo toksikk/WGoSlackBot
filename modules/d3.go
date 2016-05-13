@@ -36,16 +36,17 @@ func d3HandleMessage(payload *WebhookPayload) {
 	if payload.Command == "/d3" {
 		reply := handleD3Request(payload, true)
 		if reply != "" {
-			//SayCh <- GeneratePayload(payload.ChannelName, d3boticon, reply, d3botname)
+			SayCh <- GeneratePayload(payload.ChannelName, d3boticon, reply, d3botname)
 		}
 	}
 	if payload.TriggerWord == "!d3" {
 		reply := handleD3Request(payload, false)
 		if reply != "" {
-			//SayCh <- GeneratePayload(payload.ChannelName, d3boticon, reply, d3botname)
+			SayCh <- GeneratePayload(payload.ChannelName, d3boticon, reply, d3botname)
 		}
 	}
 }
+
 func handleD3Request(payload *WebhookPayload, isCommand bool) string {
 	var tokMod int
 	if isCommand {
@@ -63,35 +64,97 @@ func handleD3Request(payload *WebhookPayload, isCommand bool) string {
 			battletag, err := checkBattleTag(tok[0+tokMod])
 			if err != nil {
 				log.Println(err)
-				SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Battletag "+tok[0+tokMod]+"fehlerhaft oder nicht gefunden.", d3botname)
+				SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Battletag "+tok[0+tokMod]+" fehlerhaft oder nicht gefunden.", d3botname)
 			}
-			profile := getD3Profile(battletag)
-			// ab hier output generieren
-			result = "Profil: " + util.NumberToString(profile.ParagonLevel, '.')
+			profile, err := getD3Profile(battletag)
+			if err != nil {
+				log.Println(err)
+				SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Battletag "+tok[0+tokMod]+" fehlerhaft oder nicht gefunden.", d3botname)
+				result = ""
+			} else {
+				readableBattletag := strings.Replace(battletag, "-", "#", 1)
+				lastUpdate := time.Unix(int64(profile.LastUpdated), 0).Format(time.RFC850)
+				paragon := util.NumberToString(profile.ParagonLevel, '.')
+				paragonHardcore := util.NumberToString(profile.ParagonLevelHardcore, '.')
+				paragonSeason := util.NumberToString(profile.ParagonLevelSeason, '.')
+				paragonSeasonHardcore := util.NumberToString(profile.ParagonLevelSeasonHardcore, '.')
+				var allHeroes string
+				for i, hero := range profile.Heroes {
+					allHeroes += classToIcon(hero.Class) + "" + heroTypeToIconString(hero.Seasonal, hero.Hardcore) + " " + hero.Name + " " + strconv.Itoa(hero.Level)
+					if i+1 != len(profile.Heroes) {
+						allHeroes += ", "
+					}
+				}
+				result +=
+					"*" + readableBattletag + "*\n" +
+						"*Last Update:* " + lastUpdate + "\n" +
+						"*Paragon:* " + paragon + ", :d3hardcore:" + paragonHardcore + ", :d3season:" + paragonSeason + ", :d3seasonhardcore:" + paragonSeasonHardcore + "\n" +
+						"*Available Heroes:* " + allHeroes + "\n" +
+						"https://eu.battle.net/d3/en/profile/" + battletag + "/"
+			}
 		}
 	}
 	if len(tok) >= 2+tokMod {
 		battletag, err := checkBattleTag(tok[0+tokMod])
 		if err != nil {
 			log.Println(err)
-			SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Battletag "+tok[0+tokMod]+"fehlerhaft oder nicht gefunden.", d3botname)
+			SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Battletag "+tok[0+tokMod]+" fehlerhaft oder nicht gefunden.", d3botname)
 		} else {
-			profile := getD3Profile(battletag)
-			hit := false
-			for _, currenthero := range profile.Heroes {
-				if strings.ToLower(currenthero.Name) == strings.ToLower(tok[1+tokMod]) {
-					hero := getD3Hero(battletag, currenthero.ID)
-					hit = true
-					// ab hier output generieren
-					result = "Hero: " + accounting.FormatNumberFloat64(hero.Stats.Damage, 3, ".", ",")
+			profile, err := getD3Profile(battletag)
+			if err != nil {
+				log.Println(err)
+				SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Battletag "+tok[0+tokMod]+" fehlerhaft oder nicht gefunden.", d3botname)
+			} else {
+				hit := false
+				for _, currenthero := range profile.Heroes {
+					if strings.ToLower(currenthero.Name) == strings.ToLower(tok[1+tokMod]) {
+						hero := getD3Hero(battletag, currenthero.ID)
+						hit = true
+						// TODO: hero data output
+						result = "Hero: " + accounting.FormatNumberFloat64(hero.Stats.Damage, 0, ".", ",") + "\n" +
+							"https://eu.battle.net/d3/en/profile/" + battletag + "/hero/" + strconv.Itoa(currenthero.ID)
+						result = "Hero: " + "https://eu.battle.net/d3/en/profile/" + battletag + "/hero/" + strconv.Itoa(currenthero.ID)
+					}
 				}
-			}
-			if !hit {
-				SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Es konnte kein Charakter mit dem Namen *"+tok[1+tokMod]+"* unter dem Battletag *"+tok[0+tokMod]+"* gefunden werden.", d3botname)
+				if !hit {
+					SayCh <- GeneratePayload("@"+payload.UserName, d3boticon, "Es konnte kein Charakter mit dem Namen *"+tok[1+tokMod]+"* unter dem Battletag *"+tok[0+tokMod]+"* gefunden werden.", d3botname)
+				}
 			}
 		}
 	}
 
+	return result
+}
+func classToIcon(class string) string {
+	switch class {
+	case "witch-doctor":
+		return ":d3witchdoctor:"
+	case "barbarian":
+		return ":d3barbarian:"
+	case "crusader":
+		return ":d3crusader:"
+	case "demon-hunter":
+		return ":d3demonhunter:"
+	case "wizard":
+		return ":d3wizard:"
+	case "monk":
+		return ":d3monk:"
+	default:
+		return ""
+	}
+}
+func heroTypeToIconString(seasonal bool, hardcore bool) string {
+	result := ""
+	if seasonal && hardcore {
+		result = ":d3seasonhardcore:"
+	} else {
+		if seasonal {
+			result = ":d3season:"
+		}
+		if hardcore {
+			result = ":d3hardcore:"
+		}
+	}
 	return result
 }
 func checkBattleTag(battletag string) (tag string, e error) {
@@ -103,7 +166,7 @@ func checkBattleTag(battletag string) (tag string, e error) {
 	}
 	return "", errors.New("invalid battletag")
 }
-func getD3Profile(battletag string) d3Profile {
+func getD3Profile(battletag string) (profile d3Profile, e error) {
 	requesturl := bnetd3apiurl + "profile/" + battletag + "/?locale=en_GB&apikey=" + d3apikey
 	var result d3Profile
 	resp, err := http.Get(requesturl)
@@ -116,10 +179,13 @@ func getD3Profile(battletag string) d3Profile {
 		} else {
 			defer resp.Body.Close()
 			json.Unmarshal(reader, &result)
-			return result
+			if result.BattleTag == "" {
+				return result, errors.New("Profile not found")
+			}
+			return result, nil
 		}
 	}
-	return result
+	return result, nil
 }
 func getD3Hero(battletag string, heroid int) d3Hero {
 	heroidstring := strconv.Itoa(heroid)
